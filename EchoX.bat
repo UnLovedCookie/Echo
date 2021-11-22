@@ -1,4 +1,5 @@
 ::v4
+::https://github.com/Xt5gamerxX/Echo/blob/main/LICENSE
 @echo off
 Mode 52,16
 title Echo X
