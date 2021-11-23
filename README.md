@@ -1,2 +1,2 @@
-# Echo
+# EchoX
 PC Optimizer
