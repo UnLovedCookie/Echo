@@ -18,8 +18,8 @@ if %errorlevel% neq 0 (
 )
 
 ::Run CMD in 32-Bit
-set "SystemPath=%SystemRoot%\System32"
-if not "%ProgramFiles(x86)%"=="" (if exist %SystemRoot%\Sysnative\* set "SystemPath=%SystemRoot%\Sysnative")
+set SystemPath=%SystemRoot%\System32
+if not "%ProgramFiles(x86)%"=="" (if exist %SystemRoot%\Sysnative\* set SystemPath=%SystemRoot%\Sysnative)
 if not %processor_architecture%==AMD64 (%SystemPath%\cmd.exe /c "%~s0" && exit /b)
 
 ::Choice Prompt Setup
@@ -209,9 +209,9 @@ if "%Idle%"=="0x1" (set onoff=on) else (set onoff=off)
 echo [[94m3[91m] Disable Idle [32m!onoff![91m
 echo Can generate more heat but has more stable FPS
 echo.
-if "%IncreaseDecrease%"=="0x1" (set onoff=60/30) else (set onoff=0/0)
+if "%IncreaseDecrease%"=="0x1" (set onoff=60/30) else (set onoff=1/1)
 echo [[94m4[91m] Increase/Decrease Threshold [32m!onoff![91m
-echo 0/0 for performance, 60/30 for cooling
+echo 1/1 for performance, 60/30 for cooling
 echo.
 choice /c:1234NB /n /m "%BS%                [N] Next   [B] Back"
 set SettingsItem=!errorlevel!
@@ -296,6 +296,31 @@ set SettingsItem=
 goto :Settings
 :notSettings
 
+::Setup Settings
+::PowerShell
+set CPU_NAME=%PROCESSOR_IDENTIFIER%
+set THREADS=%NUMBER_OF_PROCESSORS%
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v CORES ^|findstr /ri "REG_SZ"') do set CORES=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v GPU_NAME ^|findstr /ri "REG_SZ"') do set GPU_NAME=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v mem ^|findstr /ri "REG_SZ"') do set mem=%%a) >nul 2>&1
+
+::Power
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Idle ^|findstr /ri "Reg_DWORD"') do set Idle=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Throttling ^|findstr /ri "Reg_DWORD"') do set Throttling=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v PromoteDemote ^|findstr /ri "Reg_DWORD"') do set PromoteDemote=%%a) >nul 2>&1
+
+::Advanced
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Debloat ^|findstr /ri "Reg_DWORD"') do set Debloat=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v BCD ^|findstr /ri "Reg_DWORD"') do set BCD=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v KBoost ^|findstr /ri "Reg_DWORD"') do set KBoost=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Restore ^|findstr /ri "Reg_DWORD"') do set Restore=%%a) >nul 2>&1
+
+::Optional
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Res ^|findstr /ri "Reg_DWORD"') do set Res=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v DSCP ^|findstr /ri "Reg_DWORD"') do set DSCP=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v NVCP ^|findstr /ri "Reg_DWORD"') do set NVCP=%%a) >nul 2>&1
+(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Mouse ^|findstr /ri "Reg_DWORD"') do set Mouse=%%a) >nul 2>&1
+
 if not exist "%temp%\EchoProfile.nip" (if not "%NVCP%"=="0x1" (
 echo Downloading Nvidia Nip [...]
 if exist "%appdata%\.minecraft\options.txt" (set DL=https://cdn.discordapp.com/attachments/798190447117074473/880931795632271390/Minecraft.nip) else (set DL=https://cdn.discordapp.com/attachments/798190447117074473/891526556692938774/EchoProfile.nip)
@@ -316,7 +341,7 @@ if exist "%windir%\system32\windowspowershell\v1.0\powershell.exe" (powershell w
 
 if not exist "%temp%\EchoPow.pow" (
 echo Downloading Power Plan [...]
-set DL=https://cdn.discordapp.com/attachments/798190447117074473/912233308258189332/EchoPow.pow
+set DL=https://cdn.discordapp.com/attachments/798190447117074473/912641744615645234/EchoPow.pow
 if exist "%windir%\system32\windowspowershell\v1.0\powershell.exe" (powershell wget !DL! -OutFile "%temp%\EchoPow.pow") else (bitsadmin /transfer "" !DL! "%temp%\EchoPow.pow")
 )
 
@@ -350,31 +375,6 @@ if exist "List.txt" (del "List.txt" >nul 2>&1)
 ::Setup Nsudo
 %temp%\EchoNSudo.exe -U:S -ShowWindowMode:Hide cmd /c "Reg add "HKLM\SYSTEM\CurrentControlSet\Services\TrustedInstaller" /v "Start" /t Reg_DWORD /d "3" /f"
 %temp%\EchoNSudo.exe -U:S -ShowWindowMode:Hide cmd /c "sc start "TrustedInstaller""
-
-::Setup Settings
-::PowerShell
-set CPU_NAME=%PROCESSOR_IDENTIFIER%
-set THREADS=%NUMBER_OF_PROCESSORS%
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v CORES ^|findstr /ri "REG_SZ"') do set CORES=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v GPU_NAME ^|findstr /ri "REG_SZ"') do set GPU_NAME=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v mem ^|findstr /ri "REG_SZ"') do set mem=%%a) >nul 2>&1
-
-::Power
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Idle ^|findstr /ri "Reg_DWORD"') do set Idle=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Throttling ^|findstr /ri "Reg_DWORD"') do set Throttling=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v PromoteDemote ^|findstr /ri "Reg_DWORD"') do set PromoteDemote=%%a) >nul 2>&1
-
-::Advanced
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Debloat ^|findstr /ri "Reg_DWORD"') do set Debloat=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v BCD ^|findstr /ri "Reg_DWORD"') do set BCD=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v KBoost ^|findstr /ri "Reg_DWORD"') do set KBoost=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Restore ^|findstr /ri "Reg_DWORD"') do set Restore=%%a) >nul 2>&1
-
-::Optional
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Res ^|findstr /ri "Reg_DWORD"') do set Res=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v DSCP ^|findstr /ri "Reg_DWORD"') do set DSCP=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v NVCP ^|findstr /ri "Reg_DWORD"') do set NVCP=%%a) >nul 2>&1
-(for /f "tokens=3" %%a in ('Reg query "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Mouse ^|findstr /ri "Reg_DWORD"') do set Mouse=%%a) >nul 2>&1
 
 ::Registry Backup
 if not exist "%SystemDrive%\Regbackup.Reg" (cls
@@ -450,9 +450,6 @@ echo Disable NTFS/ReFS and FS Mitigations
 
 ::Disallow drivers to get paged into virtual memory
 Reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagingExecutive" /t Reg_DWORD /d "1" /f >nul 2>&1
-
-::Use Large System Cache to improve microstuttering
-Reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "LargeSystemCache" /t Reg_DWORD /d "1" /f >nul 2>&1
 
 ::Reliable Timestamp
 Reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Reliability" /v "TimeStampInterval" /t Reg_DWORD /d "1" /f >nul 2>&1
@@ -619,10 +616,10 @@ powercfg -setacvalueindex scheme_current sub_processor 06cadf0e-64ed-448a-8927-c
 powercfg -setacvalueindex scheme_current sub_processor 12a0ab44-fe28-4fa9-b3bd-4b64f44960a6 30 >nul 2>&1
 echo 60/30 Increase Decrease
 ) else (
-::0/0 Increase Decrease
-powercfg -setacvalueindex scheme_current sub_processor 06cadf0e-64ed-448a-8927-ce7bf90eb35d 0 >nul 2>&1
-powercfg -setacvalueindex scheme_current sub_processor 12a0ab44-fe28-4fa9-b3bd-4b64f44960a6 0 >nul 2>&1
-echo 0/0 Increase Decrease
+::1/1 Increase Decrease
+powercfg -setacvalueindex scheme_current sub_processor 06cadf0e-64ed-448a-8927-ce7bf90eb35d 1 >nul 2>&1
+powercfg -setacvalueindex scheme_current sub_processor 12a0ab44-fe28-4fa9-b3bd-4b64f44960a6 1 >nul 2>&1
+echo 1/1 Increase Decrease
 )
 
 ::Apply
@@ -1051,7 +1048,7 @@ bcdedit /set MSI Default >nul 2>&1
 bcdedit /set usephysicaldestination No >nul 2>&1
 bcdedit /set usefirmwarepcisettings No >nul 2>&1
 
->nul 2>&1 find "AMD" %CPU_NAME% && (
+if not "%CPU_NAME:AMD=%" == "%CPU_NAME%" (
 bcdedit /set nx optout >nul 2>&1
 echo Optimized AMD CPU
 ) else (
@@ -1262,7 +1259,23 @@ echo Minecraft Settings
 if "%Debloat%"=="0x1" (goto :AdvancedDebloat)
 :FinishedDebloat
 
-::Small Network Priorities
+::Clean Network
+netsh winsock reset catalog >nul 2>&1
+netsh int ip reset c:resetlog.txt >nul 2>&1
+netsh int ip reset C:\tcplog.txt >nul 2>&1
+netsh winsock reset >nul 2>&1
+start /b cmd /c "ipconfig /release >nul 2>&1"
+start /b cmd /c "ipconfig /renew >nul 2>&1"
+start /b cmd /c "ipconfig /registerdns >nul 2>&1"
+arp -d * >nul 2>&1
+ipconfig /flushdns >nul 2>&1
+echo Reset Internet
+
+::Use Large System Cache to improve microstuttering
+Reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "LargeSystemCache" /t Reg_DWORD /d "1" /f >nul 2>&1
+echo Enable Large System Cache
+
+::Network Priorities
 Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "LocalPriority" /t Reg_DWORD /d "4" /f >nul
 Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "HostsPriority" /t Reg_DWORD /d "5" /f >nul
 Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /t Reg_DWORD /d "6" /f >nul
@@ -1278,11 +1291,13 @@ Reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Set
 echo Disable Delivery Optimization
 
 ::Disable limiting bandwith
-:: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.QualityofService::QosNonBestEffortLimit
+::https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.QualityofService::QosNonBestEffortLimit
+Reg add "HKLM\SOFTWARE\WOW6432Node\Policies\Microsoft\Windows\Psched" /v "NonBestEffortLimit" /t Reg_DWORD /d "0" /f >nul
 Reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v "NonBestEffortLimit" /t Reg_DWORD /d "0" /f >nul
+Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t Reg_DWORD /d "1" /f >nul
 echo Remove Limiting Bandwidth
 
-::Configure NIT
+::Configure NIT (Thanks to Zusier)
 goto skipNIT
 for /f %%a in ('Reg query HKLM /v "*WakeOnMagicPacket" /s ^| findstr  "HKEY"') do (
 for /f %%i in ('Reg query "%%a" /v "GigaLite" ^| findstr "HKEY"') do (Reg add "%%i" /v "GigaLite" /t Reg_SZ /d "0" /f)
@@ -1312,13 +1327,6 @@ Reg add %%r /v "GigaLite" /t Reg_SZ /d "0" /f >nul
 Reg add %%r /v "PowerSavingMode" /t Reg_SZ /d "0" /f >nul
 )
 echo Disable Network Power Saving
-
-::Reset
-::netsh winsock reset >nul 2>&1
-::ipconfig /renew >nul 2>&1
-::ipconfig /release >nul 2>&1
-ipconfig /flushdns >nul 2>&1
-echo Reset Internet
 
 ::Netsh
 netsh int tcp set global initialRto=2000 >nul 2>&1
@@ -1366,13 +1374,13 @@ goto :findMTU
 :: Disable Nagle's Algorithm
 :: https://en.wikipedia.org/wiki/Nagle%27s_algorithm
 for /f "tokens=3*" %%s in ('Reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkCards" /f "ServiceName" /s^|findstr /i /l "ServiceName"') do (
-	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Psched\Parameters\Adapters\%%s" /v "NonBestEffortLimit" /t Reg_DWORD /d "0" /f >nul
-	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "DeadGWDetectDefault" /t Reg_DWORD /d "1" /f >nul
-	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "PerformRouterDiscovery" /t Reg_DWORD /d "1" /f >nul
+	::Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Psched\Parameters\Adapters\%%s" /v "NonBestEffortLimit" /t Reg_DWORD /d "0" /f >nul
+	::Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "DeadGWDetectDefault" /t Reg_DWORD /d "1" /f >nul
+	::Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "PerformRouterDiscovery" /t Reg_DWORD /d "1" /f >nul
+	::Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpInitialRTT" /t Reg_DWORD /d "0" /f >nul
+ 	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TCPNoDelay" /t Reg_DWORD /d "1" /f  >nul
 	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpAckFrequency" /t Reg_DWORD /d "1" /f >nul
 	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpDelAckTicks" /t Reg_DWORD /d "0" /f >nul
-	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpInitialRTT" /t Reg_DWORD /d "0" /f >nul
- 	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TCPNoDelay" /t Reg_DWORD /d "1" /f  >nul
 	)
 echo Internet Settings
 
@@ -1411,8 +1419,7 @@ Reg add "HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Lsa" /v "RestrictAn
 ::Disable NetBIOS, can be exploited and is highly vulnerable. (From Zeta)
 sc stop lmhosts >nul
 sc config lmhosts start=disabled >nul .
-:: Disable LanmanWorkstation, needed for SMB. Just trying to patch vulnerable services & Kill Security Holes. (From Zeta)
-:: https://cyware.com/news/what-is-smb-vulnerability-and-how-it-was-exploited-to-launch-the-wannacry-ransomware-attack-c5a97c48
+::https://cyware.com/news/what-is-smb-vulnerability-and-how-it-was-exploited-to-launch-the-wannacry-ransomware-attack-c5a97c48
 sc stop LanmanWorkstation >nul
 sc config LanmanWorkstation start=disabled >nul
 echo Security Tweaks
@@ -1427,8 +1434,8 @@ del /s /f /q %SystemDrive%\Windows\Prefetch\*.* >nul 2>&1
 echo Cleaned Drive
 
 ::Prevent explorer from screaming
-taskkill /f /im explorer.exe >nul 2>&1
-start explorer.exe >nul 2>&1
+::taskkill /f /im explorer.exe >nul 2>&1
+::start explorer.exe >nul 2>&1
 
 rundll32 user32.dll,MessageBeep
 echo.
@@ -1447,21 +1454,6 @@ shutdown.exe /r /t 00
 taskkill /im "cmd.exe"
 
 :AdvancedDebloat
-
-::MS Account Checker by Zeta
-if exist "%windir%\system32\wbem\WMIC.exe" (
-call wmic /locale:ms_409 service where (name="wlidsvc") get state /value | findstr State=Running
-if %ErrorLevel% neq 0 (
-echo Echo has detected you may be on a MS Account
-echo If you are, debloat might brick your PC
-echo.
-echo Would you still like to continue? [Y/N]
-
-set /P c=Would you still like to continue? [Y/N]
-if /I "%c%" EQU "N" (goto :FinishedDebloat)
-if /I "%c%" equ "n" (goto :FinishedDebloat)
-)
-)
 
 ::Matishzz
 Reg add "HKLM\System\CurrentControlSet\Control\Class{4d36e96c-e325-11ce-bfc1-08002be10318}" /v "UpperFilters" /t Reg_MULTI_SZ /d "" /f >nul 2>&1
@@ -2390,7 +2382,6 @@ echo Disable Smartscreen
 
 echo Advanced Services
 goto :FinishedDebloat
-
 
 :logo
 echo %BS%     ______ _____ ___ ___ _______    ___   ___
