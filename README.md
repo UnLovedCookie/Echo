@@ -4,4 +4,5 @@ EchoX | PC Optimizer
 Join the Discord to speak to me & report issues
 
 https://discord.gg/dptDHp9p9k
+
 https://sites.google.com/view/echox
