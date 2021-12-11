@@ -40,8 +40,8 @@ echo Loading Settings [...]
 cd "%SystemDrive%\Program Files\NVIDIA Corporation\NVSMI\" >nul 2>&1
 (for /f "tokens=1" %%a in ('nvidia-smi --query-gpu^=driver_version --format^=csv') do set NvidiaDriverVersion=%%a) >nul 2>&1
 
-::WMI/WMIC For Win11 Dev Support
 if not exist "%SystemRoot%\System32\wbem\WMIC.exe" (
+::WMI Settings
 Reg add "HKCU\Software\Echo" /f >nul 2>&1
 powershell -ExecutionPolicy Unrestricted -NoProfile import-module Microsoft.PowerShell.Management;import-module Microsoft.PowerShell.Utility;^
 $GPU = Get-WmiObject win32_VideoController ^| Select-Object -ExpandProperty Name;Set-ItemProperty -Path "HKCU:\Software\Echo" -Name "GPU_NAME" -Type String -Value "$GPU";^
@@ -49,7 +49,10 @@ $mem = Get-WmiObject win32_operatingsystem ^| Select-Object -ExpandProperty Tota
 $ChassisTypes = Get-WmiObject win32_SystemEnclosure ^| Select-Object -ExpandProperty ChassisTypes;Set-ItemProperty -Path "HKCU:\Software\Echo" -Name "ChassisTypes" -Type String -Value "$ChassisTypes";^
 $Degrees = Get-WmiObject -Namespace "root/wmi" MSAcpi_ThermalZoneTemperature ^| Select-Object -ExpandProperty CurrentTemperature;Set-ItemProperty -Path "HKCU:\Software\Echo" -Name "Degrees" -Type String -Value "$Degrees";^
 $CORES = Get-WmiObject win32_processor ^| Select-Object -ExpandProperty NumberOfCores;Set-ItemProperty -Path "HKCU:\Software\Echo" -Name "CORES" -Type String -Value "$CORES"
+::Win Account
+for /f %%i in ('powershell -NoProfile -Command "Get-LocalUser | Select-Object Name,PrincipalSource"') do set "str=%%i" & if "!str!" neq "!str:MicrosoftAccount=!" set Account=MS
 ) >nul 2>&1 else (
+::Faster WMIC Settings
 for /f "tokens=2 delims==" %%n in ('wmic os get TotalVisibleMemorySize /format:value') do set ram=%%n
 for /f "tokens=2 delims==" %%n in ('wmic path Win32_VideoController get Name /format:value') do set GPU_NAME=%%n
 for /f "tokens=2 delims={}" %%n in ('wmic path Win32_SystemEnclosure get ChassisTypes /format:value') do set /a ChassisTypes=%%n
@@ -58,9 +61,6 @@ for /f "tokens=2 delims==" %%n in ('wmic cpu get numberOfCores /format:value') d
 for /f "delims=" %%n in ('"wmic path Win32_VideoController get CurrentHorizontalResolution,CurrentVerticalResolution /format:value"') do set "%%n" >nul 2>&1
 ) >nul 2>&1
 call:GrabSettings
-
-::Win Account
-for /f %%i in ('powershell -NoProfile -Command "Get-LocalUser | Select-Object Name,PrincipalSource"') do set "str=%%i" & if "!str!" neq "!str:MicrosoftAccount=!" set Account=MS
 
 ::Nvidia Drivers
 ::if "%NvidiaDriverVersion%" neq "457.30" (
