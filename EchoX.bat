@@ -1,4 +1,5 @@
-::v6
+set Version=6.1
+set DevBuild=No
 ::https://tinyurl.com/echolicence
 @echo off
 Mode 52,16
@@ -7,14 +8,6 @@ color fc
 
 ::Enable Delayed Expansion
 setlocal EnableDelayedExpansion
-
-::Get Admin Rights
-if exist "%SystemDrive%\Windows\system32\adminrightstest" (rmdir %SystemDrive%\Windows\system32\adminrightstest >nul 2>&1)
-mkdir %SystemDrive%\Windows\system32\adminrightstest >nul 2>&1
-if %errorlevel% neq 0 (
-start "" /I /min powershell -NoProfile -Command start -verb runas '%~s0'
-exit /b
-)
 
 ::Begin Log
 echo Begin Log >%temp%\EchoLog.txt
@@ -32,6 +25,17 @@ echo %BS%          press any key to continue anyway
 choice /c:"CQ" /n /m "%BS%               [C] Continue  [Q] Quit" & if !errorlevel! equ 2 exit /b
 )
 
+::Get Admin Rights
+if exist "%SystemDrive%\Windows\system32\adminrightstest" (rmdir %SystemDrive%\Windows\system32\adminrightstest >nul 2>&1)
+mkdir %SystemDrive%\Windows\system32\adminrightstest >nul 2>&1
+if %errorlevel% neq 0 (
+call:EchoXLogo
+echo.
+echo                  Run EchoX as Admin
+start "" /wait /I /min powershell -NoProfile -Command start -verb runas "'%~s0'"
+exit /b
+)
+
 ::Check For Internet
 Ping www.google.nl -n 1 -w 1000 >nul
 if %errorlevel% neq 0 (
@@ -46,6 +50,21 @@ choice /c:"CQ" /n /m "%BS%               [C] Continue  [Q] Quit" & if !errorleve
 set SystemPath=%SystemRoot%\System32
 if not "%ProgramFiles(x86)%"=="" (if exist %SystemRoot%\Sysnative\* set SystemPath=%SystemRoot%\Sysnative)
 if "%processor_architecture%" neq "AMD64" (start "" /I "%SystemPath%\cmd.exe" /c "%~s0" & exit /b)
+
+::Check For Updates
+if "%DevBuild%" neq "Yes" (
+set DL=https://pastebin.com/raw/SLQzhFZY
+if exist "%windir%\system32\windowspowershell\v1.0\powershell.exe" (powershell wget !DL! -OutFile "%temp%\latestVersion.bat") else (bitsadmin /transfer "" !DL! "%temp%\latestVersion.bat") >nul 2>&1
+call "%temp%\latestVersion.bat"
+if "%Version%" neq "!latestVersion!" (cls
+call:EchoXLogo
+echo       Warning, EchoX isn't updated.
+echo  Download version !latestVersion! on the Discord, dsc.gg/echox
+echo                    ^(Put the URL in your browser^)
+echo.
+choice /c:"CQ" /n /m "%BS%               [C] Continue  [Q] Quit" & if !errorlevel! equ 2 exit /b
+)
+)
 
 ::Settings
 call:EchoXLogo
@@ -160,6 +179,7 @@ if "%Throttling%" equ "" Reg add "HKEY_CURRENT_USER\SOFTWARE\Echo" /v Throttling
 
 rem start "EchoX" /I cmd /c "@echo off & Mode 52,16 & color fc & powershell wget http://optimize.mygamesonline.org/database -OutFile C:\windows\system32\database && call ^"%~s0^" && exit /b 0"
 :Home
+cls
 call:EchoXLogo
 echo          [91m[[94m1[91m] Optimize  [[94m3[91m] Settings
 echo      [[94m2[91m] Undo  [[94m4[91m] Credits  [[94m5[91m] Game Booster
@@ -184,9 +204,7 @@ choice /c:"CQ" /n /m "%BS%               [C] Continue  [Q] Quit" & if !errorleve
 goto :Home
 )
 
-if "%MenuItem%"=="2" (
-echo [======================Credits======================]
-echo             UnLovedCookie#6871 - Creator
+if "%MenuItem%" neq "2" goto :notCredits
 echo           Zusier - Debloat + Network + More
 echo            Couleur - App and Game Settings
 echo              Uwe Sieber - Device Cleaner
@@ -201,9 +219,27 @@ echo                  yungkkj - Powerplan
 echo                    M2Teams - NSudo
 echo                    Waffle - Helped
 echo                      Vuk - Tweak
-choice /c:"CQ" /n /m "%BS%               [C] Continue  [Q] Quit" & if !errorlevel! equ 2 exit /b
+echo [===============================================P1=]
+choice /c:"NQ" /n /m "%BS%                 [N] Next  [Q] Quit"
+if !errorlevel! neq 1 goto :Home
+echo.
+echo.
+echo             UnLovedCookie#6871 - Creator
+echo.
+echo.
+echo.
+echo                        Discord
+echo             discord.com/invite/dptDHp9p9k
+echo.
+echo.
+echo                        Youtube
+echo   www.youtube.com/channel/UCc8L3DAQ2b9pyD7K9siHl9Q
+echo.
+echo.
+echo [===============================================P2=]
+choice /c:"NQ" /n /m "%BS%                 [N] Next  [Q] Quit"
 goto :Home
-)
+:notCredits
 
 if not "%MenuItem%"=="1" (goto :notSettings)
 set SettingsPage=1
@@ -1046,12 +1082,49 @@ cls
 title Net Optimizations
 echo                  [32mNet  Optimizations[91m
 
+::Disable IPv6
+rem Reg add "HKLM\System\CurrentControlSet\Services\Tcpip6\Parameters" /v "DisabledComponents" /t REG_DWORD /d "4294967295" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+
+::Lanman Server
+rem Reg add "HKLM\System\CurrentControlSet\Services\LanmanServer\Parameters" /v "a" /t REG_DWORD /d "00000000" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+
 ::Use Large System Cache to improve microstuttering
 Reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "LargeSystemCache" /t Reg_DWORD /d "1" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 echo Enable Large System Cache
 
+::Set max port to 65535
+Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters" /v "MaxUserPort" /t REG_DWORD /d "00065534" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+echo Set max port to 65535
+
+::Reduce TIME_WAIT
+Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpTimedWaitDelay" /t REG_DWORD /d "00000030" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+echo Reduce TIME_WAIT
+
+::Disable the TCP autotuning diagnostic tool
+Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters" /v "EnableWsd" /t REG_DWORD /d "00000000" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+echo Disable the TCP autotuning diagnostic tool
+
+::Enable TCP Extensions for High Performance
+Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters" /v "Tcp1323Opts" /t REG_DWORD /d "00000001" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"  
+echo Enable TCP Extensions for High Performance
+
+::Detect congestion fail to receive acknowledgement for a packet within the estimated timeout
+Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters" /v "TCPCongestionControl" /t REG_DWORD /d "00000001" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+echo Detect congestion fails
+
+::Set the maximum number of concurrent connections (per server endpoint) allowed when making requests using an HttpClient object.
+Reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v "MaxConnectionsPerServer" /t REG_DWORD /d "00000016" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+::Maximum number of HTTP 1.0 connections to a Web server
+Reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v "MaxConnectionsPer1_0Server" /t REG_DWORD /d "00000016" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+echo Maximum number of concurrent connections
+
+::TCP Congestion Control/Avoidance Algorithm
+Reg add "HKLM\System\CurrentControlSet\Control\Nsi\{eb004a03-9b1a-11d4-9123-0050047759bc}\0" /v "0200" /t REG_BINARY /d "0000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000ff000000000000000000000000000000000000000000ff000000000000000000000000000000" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+Reg add "HKLM\System\CurrentControlSet\Control\Nsi\{eb004a03-9b1a-11d4-9123-0050047759bc}\0" /v "1700" /t REG_BINARY /d "0000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000ff000000000000000000000000000000000000000000ff000000000000000000000000000000" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt" 
+echo TCP Congestion Control/Avoidance Algorithm
+
 ::https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.QualityofService::QosTimerResolution
-if "%Account%" neq "MS" Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t Reg_DWORD /d "1" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
+if "%Account%" neq "MS" Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t Reg_DWORD /d "00000001" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 Reg add "HKLM\Software\Policies\Microsoft\Windows\Psched" /v "TimerResolution" /t Reg_DWORD /d "1" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 Reg add "HKLM\System\CurrentControlSet\Services\AFD\Parameters" /v "DoNotHoldNicBuffers" /t Reg_DWORD /d "1" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 Reg add "HKLM\Software\Policies\Microsoft\Windows NT\DNSClient" /v "EnableMulticast" /t Reg_DWORD /d "0" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
@@ -1074,14 +1147,14 @@ echo Disable Delivery Optimization
 
 ::Disable limiting bandwith
 ::https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.QualityofService::QosNonBestEffortLimit
+Reg add "HKLM\Software\Policies\Microsoft\Windows\Psched" /v "NonBestEffortLimit" /t REG_DWORD /d "00000000" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 Reg add "HKLM\Software\WOW6432Node\Policies\Microsoft\Windows\Psched" /v "NonBestEffortLimit" /t Reg_DWORD /d "0" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
-Reg add "HKLM\Software\Policies\Microsoft\Windows\Psched" /v "NonBestEffortLimit" /t Reg_DWORD /d "0" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 echo Remove Limiting Bandwidth
 
 ::Network Throttling Index
 ::https://cdn.discordapp.com/attachments/890128142075850803/890135598566895666/unknown.png
 Reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "NetworkThrottlingIndex" /t Reg_DWORD /d "10" /f >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
-echo Network Throttling Indexz
+echo Network Throttling Index
 
 goto NIC
 ::NIC
@@ -1145,11 +1218,12 @@ echo NIC
 :NIC
 
 ::Disable Nagle's Algorithm
+Reg add "HKLM\Software\Microsoft\MSMQ\Parameters" /v "TCPNoDelay" /t REG_DWORD /d "00000001" /f >nul 2>&1  
 rem https://en.wikipedia.org/wiki/Nagle%27s_algorithm
 for /f %%s in ('Reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\NetworkCards" /f "ServiceName" /s') do set "str=%%i" & if "!str:ServiceName_=!" neq "!str!" (
- 	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TCPNoDelay" /t Reg_DWORD /d "1" /f
-	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpAckFrequency" /t Reg_DWORD /d "1" /f
-	Reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpDelAckTicks" /t Reg_DWORD /d "0" /f
+ 	Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TCPNoDelay" /t Reg_DWORD /d "1" /f
+	Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpAckFrequency" /t Reg_DWORD /d "1" /f
+	Reg add "HKLM\System\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\%%s" /v "TcpDelAckTicks" /t Reg_DWORD /d "0" /f
 ) >>"%temp%\EchoLog.txt" 2>>nul
 echo Internet Settings
 
@@ -1187,21 +1261,10 @@ powershell -NoProfile -Command "Set-DnsClientServerAddress -InterfaceAlias "%dev
 ) >>"%temp%\EchoLog.txt" 2>>nul
 echo Static IP
 
-::Clean Network
-echo netsh winsock reset >%temp%\RefreshNet.bat
-echo netsh int ip reset >>%temp%\RefreshNet.bat
-echo ipconfig /release >>%temp%\RefreshNet.bat
-echo ipconfig /renew >>%temp%\RefreshNet.bat
-echo arp -d * >>%temp%\RefreshNet.bat
-echo nbtstat -R >>%temp%\RefreshNet.bat
-echo nbtstat -RR >>%temp%\RefreshNet.bat
-echo ipconfig /flushdns >>%temp%\RefreshNet.bat
-echo ipconfig /registerdns >>%temp%\RefreshNet.bat
-%temp%\NSudo.exe -U:T -P:E -M:S -ShowWindowMode:Hide cmd /c "%temp%\RefreshNet.bat"
-del /f /q "%temp%\RefreshNet.bat" >nul 2>&1
-echo Clean Internet
-
 ::Netsh
+netsh winsock reset >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
+netsh int ip reset c:resetlog.txt >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
+netsh int ip reset C:\tcplog.txt >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 netsh int tcp set supplemental Internet congestionprovider=ctcp >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 netsh int tcp set heuristics disabled >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 netsh int tcp set global initialRto=2000 >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
@@ -1215,9 +1278,22 @@ netsh int tcp set global timestamps=disabled >>"%temp%\EchoLog.txt" 2>>"%temp%\E
 netsh int tcp set global nonsackrttresiliency=disabled >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 netsh int tcp set global rss=enabled >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 netsh int tcp set global MaxSynRetransmissions=2 >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
-netsh int tcp set supplemental Internet congestionprovider=ctcp >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
-netsh int tcp set heuristics disabled >>"%temp%\EchoLog.txt" 2>>"%temp%\EchoError.txt"
 echo Netsh
+
+::Clean Network
+::Release the current IP address obtains a new one.
+echo ipconfig /release >%temp%\RefreshNet.bat
+echo ipconfig /renew >>%temp%\RefreshNet.bat
+::Delete and reacquire the hostname.
+echo arp -d * >>%temp%\RefreshNet.bat
+::Purge and reload the remote cache name table.
+echo nbtstat -R >>%temp%\RefreshNet.bat
+::Sends Name Release packets to WINS and then refreshes.
+echo nbtstat -RR >>%temp%\RefreshNet.bat
+::Flush the DNS and Begin manual dynamic registration for DNS names and IP addresses.
+echo ipconfig /flushdns >>%temp%\RefreshNet.bat
+echo ipconfig /registerdns >>%temp%\RefreshNet.bat
+echo Clean Internet Batch
 
 ::Security Tweaks 
 ::PATCH V-220930 (From Zeta)
@@ -1241,26 +1317,26 @@ del /s /f /q "%SystemDrive%\windows\spool\printers\*" >nul 2>&1
 del /s /f /q "%SystemDrive%\Windows\Prefetch\*" >nul 2>&1
 echo Cleaned Drive
 
-::Restart
->nul 2>&1 taskkill /F /IM explorer.exe && start explorer
-
 title EchoX
 rundll32 user32.dll,MessageBeep
 call:EchoXLogo
-for /f "delims=" %%i in (%temp%\EchoError.txt) do set "EchoError=%%i"
-::if "%EchoError: =%" neq "BeginErrorLog" (
-if "%ErrorWarning%" equ "Yes" (
-echo %BS%         Optimizations Error
-echo %BS%     There was a error while applying Echo...
-echo.
-echo %BS%             Restart to fully apply...
-) else (
+rem for /f "delims=" %%i in (%temp%\EchoError.txt) do set "EchoError=%%i" & if "%EchoError: =%" neq "BeginErrorLog" (echo %BS%     There was a error while applying Echo...) else (echo %BS%       Optimizations Finished)
 echo %BS%       Optimizations Finished
 echo %BS%             Restart to fully apply...
 echo.
 echo.
+choice /c:"CQS" /n /m "%BS%      [C] Continue  [Q] Quit  [S] Soft-Restart"
+if %errorlevel% equ 2 exit /b
+if %errorlevel% equ 3 (
+::Restart
+cls
+echo Restarting Explorer [...]
+>nul 2>&1 taskkill /F /IM explorer.exe && start /wait explorer
+echo Restarting Graphics Driver [...]
+start /wait %temp%\Restart64.exe
+echo Refreshing Internet [...]
+%temp%\NSudo.exe -U:T -P:E -M:S -ShowWindowMode:Hide -wait cmd /c "%temp%\RefreshNet.bat"
 )
-choice /c:"CQ" /n /m "%BS%               [C] Continue  [Q] Quit" & if !errorlevel! equ 2 exit /b
 goto :Home
 
 :EchoXLogo
@@ -1274,7 +1350,7 @@ echo %BS%     \ \   __\  \   \   _  \\  \\  \ \ \   / /
 echo %BS%      \ \  \__\  \___\  \\  \\  \\  \ \/   \/
 echo %BS%       \ \_____\______\  \\__\\______\/  \  \
 echo %BS%        \^|_____^|______^|__^|^|__^|^|______/__/ \__\
-echo %BS%                                     [__^|\^|__] v6
+echo %BS%                                     [__^|\^|__] %Version%
 goto:eof
 
 :GrabSettings
